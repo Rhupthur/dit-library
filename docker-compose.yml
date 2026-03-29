@@ -1,0 +1,126 @@
+services:
+
+  # --- Bases de données ---
+
+  postgres-livres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: db_livres
+    volumes:
+      - pgdata-livres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db_livres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-utilisateurs:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: db_utilisateurs
+    volumes:
+      - pgdata-utilisateurs:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db_utilisateurs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-emprunts:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: db_emprunts
+    volumes:
+      - pgdata-emprunts:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db_emprunts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Microservices ---
+
+  service-livres:
+    build: ./services/livres
+    environment:
+      DB_HOST: postgres-livres
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: db_livres
+      DB_PORT: 5432
+    depends_on:
+      postgres-livres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-utilisateurs:
+    build: ./services/utilisateurs
+    environment:
+      DB_HOST: postgres-utilisateurs
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: db_utilisateurs
+      DB_PORT: 5432
+    depends_on:
+      postgres-utilisateurs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-emprunts:
+    build: ./services/emprunts
+    environment:
+      DB_HOST: postgres-emprunts
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: db_emprunts
+      DB_PORT: 5432
+    depends_on:
+      postgres-emprunts:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Frontend ---
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - service-livres
+      - service-utilisateurs
+      - service-emprunts
+
+  # --- Nginx ---
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - service-livres
+      - service-utilisateurs
+      - service-emprunts
+
+volumes:
+  pgdata-livres:
+  pgdata-utilisateurs:
+  pgdata-emprunts:

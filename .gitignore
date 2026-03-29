@@ -1,0 +1,19 @@
+# Environnement
+.env
+
+# Binaires Go
+*/main
+
+# Dépendances
+vendor/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
