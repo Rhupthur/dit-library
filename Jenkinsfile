@@ -7,16 +7,16 @@ pipeline {
 
     stages {
 
-        stage('Récupération du code') {
+        stage('Recuperation du code') {
             steps {
-                echo 'Clonage du dépôt GitHub...'
-                checkout scm
+                echo 'Clonage du depot GitHub...'
+                git branch: 'main', url: 'https://github.com/Rhupthur/dit-library.git'
             }
         }
 
-        stage('Vérification de lenvironnement') {
+        stage('Verification de lenvironnement') {
             steps {
-                echo 'Vérification des outils...'
+                echo 'Verification des outils...'
                 sh 'docker --version'
                 sh 'docker compose version'
             }
@@ -29,31 +29,31 @@ pipeline {
             }
         }
 
-        stage('Déploiement') {
+        stage('Deploiement') {
             steps {
-                echo 'Déploiement avec Docker Compose...'
+                echo 'Deploiement avec Docker Compose...'
                 sh 'docker compose down --remove-orphans || true'
                 sh 'docker compose up -d'
             }
         }
 
-        stage('Vérification des services') {
+        stage('Verification des services') {
             steps {
-                echo 'Vérification que les services répondent...'
-                sh 'sleep 15'
-                sh 'curl -f http://localhost/livres || exit 1'
-                sh 'curl -f http://localhost/utilisateurs || exit 1'
-                sh 'curl -f http://localhost/emprunts || exit 1'
+                echo 'Verification que les services repondent...'
+                sh 'sleep 20'
+                sh 'docker exec dit-library-service-livres-1 wget -qO- http://localhost:8001/health || exit 1'
+                sh 'docker exec dit-library-service-utilisateurs-1 wget -qO- http://localhost:8002/health || exit 1'
+                sh 'docker exec dit-library-service-emprunts-1 wget -qO- http://localhost:8003/health || exit 1'
             }
         }
     }
 
     post {
         success {
-            echo 'Déploiement réussi !'
+            echo 'Deploiement reussi !'
         }
         failure {
-            echo 'Échec du pipeline — arrêt des containers...'
+            echo 'Echec du pipeline - arret des containers...'
             sh 'docker compose down || true'
         }
     }
